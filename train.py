@@ -183,7 +183,7 @@ if __name__ == '__main__':
         privacy_engine.attach(optimizer)
         print("Attached privacy engine")
 
-    checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net)
+    checkpoint_path = os.path.join(args.save_path, args.net)
 
     #use tensorboard
     if not os.path.exists(settings.LOG_DIR):
