@@ -134,6 +134,8 @@ if __name__ == '__main__':
     parser.add_argument('-dp', default=False, action='store_true')
     parser.add_argument('-save_path', type=str, default='/content/drive/My Drive')
     parser.add_argument('-epochs', type=int, default=100)
+    parser.add_argument('-sigma', type=float, default=0.001)
+    parser.add_argument('-c', type=float, default=100.)
     args = parser.parse_args()
 
     net = get_network(args)
@@ -170,11 +172,11 @@ if __name__ == '__main__':
     if args.dp:
         privacy_engine = PrivacyEngine(
             net,
-            batch_size=args.batch_size,
+            batch_size=args.b,
             sample_size=len(cifar100_training_loader.dataset),
             alphas=[1 + x / 100.0 for x in range(1, 1000)] + list(range(12, 100)),
             noise_multiplier=args.sigma,
-            max_grad_norm=args.max_per_sample_grad_norm,
+            max_grad_norm=args.c,
             clip_per_layer=False,
             enable_stat=False
         )
@@ -199,6 +201,7 @@ if __name__ == '__main__':
 
     best_acc = 0.0
     stats = []
+    print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
     for epoch in range(1, args.epochs + 1):
         if epoch > args.warm:
             train_scheduler.step(epoch)
@@ -216,13 +219,14 @@ if __name__ == '__main__':
 
         if not args.dp:
             #start to save best performance model after learning rate decay to 0.01
-            if epoch > settings.MILESTONES[1] and best_acc < acc:
+            if epoch > 60 and best_acc < acc:
                 torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='best'))
                 best_acc = acc
                 continue
 
             if not epoch % settings.SAVE_EPOCH:
                 torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
+                print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
 
         else:
             torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='dp'))
