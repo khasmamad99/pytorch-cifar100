@@ -22,6 +22,9 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
+from opacus import PrivacyEngine
+from opacus.utils.module_modification import convert_batchnorm_modules
+
 from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR
 
@@ -42,6 +45,15 @@ def train(epoch):
         loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step()
+
+        if args.dp:
+            epsilon, best_alpha = optimizer.privacy_engine.get_privacy_spent(args.delta)
+            print(
+                f"Train Epoch: {epoch} \t"
+                f"Loss: {np.mean(losses):.6f} "
+                f"(ε = {epsilon:.2f}, δ = {args.delta}) for α = {best_alpha}"   
+            )
+            return epsilon, best_alpha
 
         n_iter = (epoch - 1) * len(cifar100_training_loader) + batch_index + 1
 
@@ -116,12 +128,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-net', type=str, required=True, help='net type')
     parser.add_argument('-gpu', action='store_true', default=False, help='use gpu or not')
-    parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
+    parser.add_argument('-b', type=int, default=256, help='batch size for dataloader')
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
+    parser.add_argument('-dp', type=bool, default=False, action='store_true')
+    parser.add_argument('-save_path', type='str', default='/content/drive/My Drive')
+    parser.add_argument('-epochs', type=int, default=100)
     args = parser.parse_args()
 
     net = get_network(args)
+
+    if args.dp:
+        net = convert_batchnorm_modules(net)
 
     #data preprocessing:
     cifar100_training_loader = get_training_dataloader(
@@ -142,10 +160,28 @@ if __name__ == '__main__':
 
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2) #learning rate decay
+    train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[60, 80], gamma=0.2) #learning rate decay
+
+
+
     iter_per_epoch = len(cifar100_training_loader)
     warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
-    checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
+
+    if args.dp:
+        privacy_engine = PrivacyEngine(
+            net,
+            batch_size=args.batch_size,
+            sample_size=len(cifar100_training_loader.dataset),
+            alphas=[1 + x / 100.0 for x in range(1, 1000)] + list(range(12, 100)),
+            noise_multiplier=args.sigma,
+            max_grad_norm=args.max_per_sample_grad_norm,
+            clip_per_layer=False,
+            enable_stat=False
+        )
+        privacy_engine.attach(optimizer)
+        print("Attached privacy engine")
+
+    checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net)
 
     #use tensorboard
     if not os.path.exists(settings.LOG_DIR):
@@ -159,22 +195,38 @@ if __name__ == '__main__':
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
     checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}.pth')
+    numpy_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}')
 
     best_acc = 0.0
-    for epoch in range(1, settings.EPOCH):
+    stats = []
+    for epoch in range(1, args.epoch + 1):
         if epoch > args.warm:
             train_scheduler.step(epoch)
 
-        train(epoch)
+        stat = []
+        if args.dp:
+            epsilon, alpha = train(epoch)
+            stat.append(epsilon)
+            stat.append(alpha)
+        else:
+            train(epoch)
         acc = eval_training(epoch)
+        stat.append(acc)
+        stats.append(tuple(stat))
 
-        #start to save best performance model after learning rate decay to 0.01
-        if epoch > settings.MILESTONES[1] and best_acc < acc:
-            torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='best'))
-            best_acc = acc
-            continue
+        if not args.dp:
+            #start to save best performance model after learning rate decay to 0.01
+            if epoch > settings.MILESTONES[1] and best_acc < acc:
+                torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='best'))
+                best_acc = acc
+                continue
 
-        if not epoch % settings.SAVE_EPOCH:
-            torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
+            if not epoch % settings.SAVE_EPOCH:
+                torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
+
+        else:
+            torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='dp'))
+            np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp'), stats)
+
 
     writer.close()
