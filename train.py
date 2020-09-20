@@ -201,7 +201,7 @@ if __name__ == '__main__':
 
     best_acc = 0.0
     stats = []
-    print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
+    print(checkpoint_path.format(net=args.net, epoch=0, type='regular'))
     for epoch in range(1, args.epochs + 1):
         if epoch > args.warm:
             train_scheduler.step(epoch)
