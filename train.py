@@ -203,8 +203,10 @@ if __name__ == '__main__':
     #create checkpoint folder to save model
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
-    checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}.pth')
-    numpy_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}')
+    
+    checkpoint_path_ = checkpoint_path
+    checkpoint_path = os.path.join(checkpoint_path_, '{net}-{epoch}-{type}.pth')
+    numpy_path = os.path.join(checkpoint_path_, '{net}-{epoch}-{type}')
 
     best_acc = 0.0
     stats = []
