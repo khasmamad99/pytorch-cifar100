@@ -141,6 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('-epochs', type=int, default=100)
     parser.add_argument('-sigma', type=float, default=0.001)
     parser.add_argument('-c', type=float, default=100.)
+    parser.add_argument('-delta', type=float, default=1e-5)
     args = parser.parse_args()
 
     net = get_network(args)
