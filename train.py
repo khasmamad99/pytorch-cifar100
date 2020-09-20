@@ -61,13 +61,13 @@ def train(epoch):
 
 
 
-        if args.dp:
-            epsilon, best_alpha = optimizer.privacy_engine.get_privacy_spent(args.delta)
-            print(
-                f"Train Epoch: {epoch} \t"
-                f"(ε = {epsilon:.2f}, δ = {args.delta}) for α = {best_alpha}"   
-            )
-            return epsilon, best_alpha
+    if args.dp:
+        epsilon, best_alpha = optimizer.privacy_engine.get_privacy_spent(args.delta)
+        print(
+            f"Train Epoch: {epoch} \t"
+            f"(ε = {epsilon:.2f}, δ = {args.delta}) for α = {best_alpha}"   
+        )
+        return epsilon, best_alpha
 
         # n_iter = (epoch - 1) * len(cifar100_training_loader) + batch_index + 1
 
