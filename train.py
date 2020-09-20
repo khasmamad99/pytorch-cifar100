@@ -199,7 +199,7 @@ if __name__ == '__main__':
 
     best_acc = 0.0
     stats = []
-    for epoch in range(1, args.epoch + 1):
+    for epoch in range(1, args.epochs + 1):
         if epoch > args.warm:
             train_scheduler.step(epoch)
 
