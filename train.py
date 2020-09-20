@@ -55,7 +55,6 @@ def train(epoch):
             epsilon, best_alpha = optimizer.privacy_engine.get_privacy_spent(args.delta)
             print(
                 f"Train Epoch: {epoch} \t"
-                f"Loss: {np.mean(losses):.6f} "
                 f"(ε = {epsilon:.2f}, δ = {args.delta}) for α = {best_alpha}"   
             )
             return epsilon, best_alpha
