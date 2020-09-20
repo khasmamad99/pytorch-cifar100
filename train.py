@@ -132,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     parser.add_argument('-dp', default=False, action='store_true')
-    parser.add_argument('-save_path', type='str', default='/content/drive/My Drive')
+    parser.add_argument('-save_path', type=str, default='/content/drive/My Drive')
     parser.add_argument('-epochs', type=int, default=100)
     args = parser.parse_args()
 
