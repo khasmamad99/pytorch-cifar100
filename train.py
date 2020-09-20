@@ -28,6 +28,11 @@ from opacus.utils.module_modification import convert_batchnorm_modules
 from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR
 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+
 def train(epoch):
 
     start = time.time()
@@ -75,9 +80,9 @@ def train(epoch):
         #update training loss for each iteration
         # writer.add_scalar('Train/loss', loss.item(), n_iter)
 
-    for name, param in net.named_parameters():
-        layer, attr = os.path.splitext(name)
-        attr = attr[1:]
+    # for name, param in net.named_parameters():
+    #     layer, attr = os.path.splitext(name)
+    #     attr = attr[1:]
         # writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
 
     finish = time.time()
@@ -142,6 +147,8 @@ if __name__ == '__main__':
 
     if args.dp:
         net = convert_batchnorm_modules(net)
+
+    net.to(device)
 
     #data preprocessing:
     cifar100_training_loader = get_training_dataloader(
