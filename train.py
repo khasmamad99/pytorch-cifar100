@@ -140,7 +140,7 @@ if __name__ == '__main__':
     parser.add_argument('-dp', default=False, action='store_true')
     parser.add_argument('-save_path', type=str, default='/content/drive/My Drive')
     parser.add_argument('-epochs', type=int, default=100)
-    parser.add_argument('-sigma', type=float, default=0.001)
+    parser.add_argument('-sigma', type=float, default=0.00001)
     parser.add_argument('-c', type=float, default=100.)
     parser.add_argument('-delta', type=float, default=1e-5)
     args = parser.parse_args()
@@ -240,8 +240,8 @@ if __name__ == '__main__':
                 print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
 
         else:
-            torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='dp'))
-            np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp'), stats)
+            torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='dp')+"{}".format(args.sigma))
+            np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp')+'{}'.format(args.sigma), stats)
 
 
     # writer.close()
