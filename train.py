@@ -170,12 +170,6 @@ if __name__ == '__main__':
     )
 
 
-
-
-
-    iter_per_epoch = len(cifar10_training_loader)
-    warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
-
     
 
     checkpoint_path = os.path.join(args.save_path, args.net)
@@ -210,6 +204,10 @@ if __name__ == '__main__':
         loss_function = nn.CrossEntropyLoss()
         optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
         train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[40, 60], gamma=0.2) #learning rate decay
+
+        
+        iter_per_epoch = len(cifar10_training_loader)
+        warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
 
 
         if args.dp:
