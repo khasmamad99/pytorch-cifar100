@@ -139,7 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     parser.add_argument('-dp', default=False, action='store_true')
     parser.add_argument('-save_path', type=str, default='/content/drive/My Drive/resnet18')
-    parser.add_argument('-epochs', type=int, default=100)
+    parser.add_argument('-epochs', type=int, default=60)
     parser.add_argument('-sigma', type=float, default=0.0001)
     parser.add_argument('-c', type=float, default=100.)
     parser.add_argument('-delta', type=float, default=1e-5)
@@ -154,16 +154,16 @@ if __name__ == '__main__':
 
     #data preprocessing:
     cifar10_training_loader = get_training_dataloader(
-        settings.CIFAR10_TRAIN_MEAN,
-        settings.CIFAR10_TRAIN_STD,
+        settings.CIFAR100_TRAIN_MEAN,
+        settings.CIFAR100_TRAIN_STD,
         num_workers=4,
         batch_size=args.b,
         shuffle=True
     )
 
     cifar10_test_loader = get_test_dataloader(
-        settings.CIFAR10_TRAIN_MEAN,
-        settings.CIFAR10_TRAIN_STD,
+        settings.CIFAR100_TRAIN_MEAN,
+        settings.CIFAR100_TRAIN_STD,
         num_workers=4,
         batch_size=args.b,
         shuffle=True
@@ -171,26 +171,14 @@ if __name__ == '__main__':
 
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[60, 80], gamma=0.2) #learning rate decay
+    train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[40, 60], gamma=0.2) #learning rate decay
 
 
 
     iter_per_epoch = len(cifar10_training_loader)
     warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
 
-    if args.dp:
-        privacy_engine = PrivacyEngine(
-            net,
-            batch_size=args.b,
-            sample_size=len(cifar10_training_loader.dataset),
-            alphas=[1 + x / 100.0 for x in range(1, 1000)] + list(range(12, 100)),
-            noise_multiplier=args.sigma,
-            max_grad_norm=args.c,
-            clip_per_layer=False,
-            enable_stat=False
-        )
-        privacy_engine.attach(optimizer)
-        print("Attached privacy engine")
+    
 
     checkpoint_path = os.path.join(args.save_path, args.net)
 
@@ -213,22 +201,38 @@ if __name__ == '__main__':
     best_acc = 0.0
     stats = []
     print(checkpoint_path.format(net=args.net, epoch=0, type='regular'))
-    for epoch in range(1, args.epochs + 1):
-        if epoch > args.warm:
-            train_scheduler.step(epoch)
-
-        stat = []
+    for sigma in [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
+        args.sigma = sigma
         if args.dp:
-            epsilon, alpha = train(epoch)
-            stat.append(epsilon)
-            stat.append(alpha)
-        else:
-            train(epoch)
-        acc = eval_training(epoch)
-        stat.append(acc)
-        stats.append(tuple(stat))
+            privacy_engine = PrivacyEngine(
+                net,
+                batch_size=args.b,
+                sample_size=len(cifar10_training_loader.dataset),
+                alphas=[1 + x / 100.0 for x in range(1, 1000)] + list(range(12, 100)),
+                noise_multiplier=args.sigma,
+                max_grad_norm=args.c,
+                clip_per_layer=False,
+                enable_stat=False
+            )
+            privacy_engine.attach(optimizer)
+            print("Attached privacy engine")
 
-        if args.dp and epoch % 5 == 0:
+        for epoch in range(1, args.epochs + 1):
+            if epoch > args.warm:
+                train_scheduler.step(epoch)
+
+            stat = []
+            if args.dp:
+                epsilon, alpha = train(epoch)
+                stat.append(epsilon)
+                stat.append(alpha)
+            else:
+                train(epoch)
+            acc = eval_training(epoch)
+            stat.append(acc)
+            stats.append(tuple(stat))
+
+        if args.dp:
             torch.save(
                 {
                     'state_dict' : net.state_dict(),
@@ -237,22 +241,22 @@ if __name__ == '__main__':
                     'best_alpha' : alpha,
                     'accuracy'  : acc
                 }, 
-                os.path.join(args.save_path, f"resnet18_cifar10_dp_{epoch}.tar")
+                os.path.join(args.save_path, f"resnet18_cifar100_dp_{sigma}.tar")
             )
             print("SAVEDDDDDDDDDD")
-            #start to save best performance model after learning rate decay to 0.01
-            # if epoch > 60 and best_acc < acc:
-            #     torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='best'))
-            #     best_acc = acc
-            #     continue
+                #start to save best performance model after learning rate decay to 0.01
+                # if epoch > 60 and best_acc < acc:
+                #     torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='best'))
+                #     best_acc = acc
+                #     continue
 
-            # if not epoch % settings.SAVE_EPOCH:
-            #     torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
-            #     print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
+                # if not epoch % settings.SAVE_EPOCH:
+                #     torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
+                #     print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
 
-        elif epoch % 5 == 0:
-            torch.save(net.state_dict(), os.path.join(args.save_path, f"resnet18_cifar10.pt"))
-            # np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp')+'{}'.format(args.sigma), stats)
+            # elif epoch % 5 == 0:
+            #     torch.save(net.state_dict(), os.path.join(args.save_path, f"resnet18_cifar10.pt"))
+                # np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp')+'{}'.format(args.sigma), stats)
 
 
     # writer.close()
