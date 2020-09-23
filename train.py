@@ -138,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     parser.add_argument('-dp', default=False, action='store_true')
-    parser.add_argument('-save_path', type=str, default='/content/drive/My Drive')
+    parser.add_argument('-save_path', type=str, default='/content/drive/My Drive/resnet18')
     parser.add_argument('-epochs', type=int, default=100)
     parser.add_argument('-sigma', type=float, default=0.00001)
     parser.add_argument('-c', type=float, default=100.)
@@ -228,19 +228,29 @@ if __name__ == '__main__':
         stat.append(acc)
         stats.append(tuple(stat))
 
-        if not args.dp:
+        if args.dp and epoch % 5 == 0:
+            torch.save(
+                {
+                    'state_dict' : net.state_dict(),
+                    'epoch' : epoch,
+                    'epsilon' : epsilon,
+                    'best_alpha' : alpha,
+                    'accuracy'  : acc
+                }, 
+                os.path.join(args.save_path, f"resnet18_cifar100_dp_{epoch}.tar")
+            )
             #start to save best performance model after learning rate decay to 0.01
-            if epoch > 60 and best_acc < acc:
-                torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='best'))
-                best_acc = acc
-                continue
+            # if epoch > 60 and best_acc < acc:
+            #     torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='best'))
+            #     best_acc = acc
+            #     continue
 
-            if not epoch % settings.SAVE_EPOCH:
-                torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
-                print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
+            # if not epoch % settings.SAVE_EPOCH:
+            #     torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
+            #     print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
 
         else:
-            torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='dp')+"{}".format(args.sigma))
+            torch.save(net.state_dict(), os.path.join(args.save_path, f"resnet18_cifar100.pt"))
             np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp')+'{}'.format(args.sigma), stats)
 
 
