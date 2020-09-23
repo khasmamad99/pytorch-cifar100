@@ -239,6 +239,7 @@ if __name__ == '__main__':
                 }, 
                 os.path.join(args.save_path, f"resnet18_cifar100_dp_{epoch}.tar")
             )
+            print("SAVEDDDDDDDDDD")
             #start to save best performance model after learning rate decay to 0.01
             # if epoch > 60 and best_acc < acc:
             #     torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='best'))
