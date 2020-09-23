@@ -237,7 +237,7 @@ if __name__ == '__main__':
                     'best_alpha' : alpha,
                     'accuracy'  : acc
                 }, 
-                os.path.join(args.save_path, f"resnet18_cifar100_dp_{epoch}.tar")
+                os.path.join(args.save_path, f"resnet18_cifar10_dp_{epoch}.tar")
             )
             print("SAVEDDDDDDDDDD")
             #start to save best performance model after learning rate decay to 0.01
@@ -251,7 +251,7 @@ if __name__ == '__main__':
             #     print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
 
         elif epoch % 5 == 0:
-            torch.save(net.state_dict(), os.path.join(args.save_path, f"resnet18_cifar100.pt"))
+            torch.save(net.state_dict(), os.path.join(args.save_path, f"resnet18_cifar10.pt"))
             # np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp')+'{}'.format(args.sigma), stats)
 
 
