@@ -249,9 +249,9 @@ if __name__ == '__main__':
             #     torch.save(net.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
             #     print(checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
 
-        else:
+        elif epoch % 5 == 0:
             torch.save(net.state_dict(), os.path.join(args.save_path, f"resnet18_cifar100.pt"))
-            np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp')+'{}'.format(args.sigma), stats)
+            # np.save(numpy_path.format(net=args.net, epoch=epoch, type='dp')+'{}'.format(args.sigma), stats)
 
 
     # writer.close()
