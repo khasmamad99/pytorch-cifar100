@@ -37,7 +37,7 @@ def train(epoch):
 
     start = time.time()
     net.train()
-    for batch_index, (images, labels) in enumerate(cifar100_training_loader):
+    for batch_index, (images, labels) in enumerate(cifar10_training_loader):
         if epoch <= args.warm:
             warmup_scheduler.step()
 
@@ -56,7 +56,7 @@ def train(epoch):
             optimizer.param_groups[0]['lr'],
             epoch=epoch,
             trained_samples=batch_index * args.b + len(images),
-            total_samples=len(cifar100_training_loader.dataset)
+            total_samples=len(cifar10_training_loader.dataset)
         ))
 
 
@@ -69,7 +69,7 @@ def train(epoch):
         )
         return epsilon, best_alpha
 
-        # n_iter = (epoch - 1) * len(cifar100_training_loader) + batch_index + 1
+        # n_iter = (epoch - 1) * len(cifar10_training_loader) + batch_index + 1
 
         # last_layer = list(net.children())[-1]
         # for name, para in last_layer.named_parameters():
@@ -99,7 +99,7 @@ def eval_training(epoch):
     test_loss = 0.0 # cost function error
     correct = 0.0
 
-    for (images, labels) in cifar100_test_loader:
+    for (images, labels) in cifar10_test_loader:
 
         if args.gpu:
             images = images.cuda()
@@ -117,17 +117,17 @@ def eval_training(epoch):
         print(torch.cuda.memory_summary(), end='')
     print('Evaluating Network.....')
     print('Test set: Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
-        test_loss / len(cifar100_test_loader.dataset),
-        correct.float() / len(cifar100_test_loader.dataset),
+        test_loss / len(cifar10_test_loader.dataset),
+        correct.float() / len(cifar10_test_loader.dataset),
         finish - start
     ))
     print()
 
     #add informations to tensorboard
-    # writer.add_scalar('Test/Average loss', test_loss / len(cifar100_test_loader.dataset), epoch)
-    # writer.add_scalar('Test/Accuracy', correct.float() / len(cifar100_test_loader.dataset), epoch)
+    # writer.add_scalar('Test/Average loss', test_loss / len(cifar10_test_loader.dataset), epoch)
+    # writer.add_scalar('Test/Accuracy', correct.float() / len(cifar10_test_loader.dataset), epoch)
 
-    return correct.float() / len(cifar100_test_loader.dataset)
+    return correct.float() / len(cifar10_test_loader.dataset)
 
 if __name__ == '__main__':
 
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     parser.add_argument('-dp', default=False, action='store_true')
     parser.add_argument('-save_path', type=str, default='/content/drive/My Drive/resnet18')
     parser.add_argument('-epochs', type=int, default=100)
-    parser.add_argument('-sigma', type=float, default=0.00001)
+    parser.add_argument('-sigma', type=float, default=0.0001)
     parser.add_argument('-c', type=float, default=100.)
     parser.add_argument('-delta', type=float, default=1e-5)
     args = parser.parse_args()
@@ -153,17 +153,17 @@ if __name__ == '__main__':
     net.to(device)
 
     #data preprocessing:
-    cifar100_training_loader = get_training_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
+    cifar10_training_loader = get_training_dataloader(
+        settings.CIFAR10_TRAIN_MEAN,
+        settings.CIFAR10_TRAIN_STD,
         num_workers=4,
         batch_size=args.b,
         shuffle=True
     )
 
-    cifar100_test_loader = get_test_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
+    cifar10_test_loader = get_test_dataloader(
+        settings.CIFAR10_TRAIN_MEAN,
+        settings.CIFAR10_TRAIN_STD,
         num_workers=4,
         batch_size=args.b,
         shuffle=True
@@ -175,14 +175,14 @@ if __name__ == '__main__':
 
 
 
-    iter_per_epoch = len(cifar100_training_loader)
+    iter_per_epoch = len(cifar10_training_loader)
     warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
 
     if args.dp:
         privacy_engine = PrivacyEngine(
             net,
             batch_size=args.b,
-            sample_size=len(cifar100_training_loader.dataset),
+            sample_size=len(cifar10_training_loader.dataset),
             alphas=[1 + x / 100.0 for x in range(1, 1000)] + list(range(12, 100)),
             noise_multiplier=args.sigma,
             max_grad_norm=args.c,
