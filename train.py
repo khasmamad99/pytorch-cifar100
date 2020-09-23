@@ -169,9 +169,7 @@ if __name__ == '__main__':
         shuffle=True
     )
 
-    loss_function = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[40, 60], gamma=0.2) #learning rate decay
+
 
 
 
@@ -201,8 +199,19 @@ if __name__ == '__main__':
     best_acc = 0.0
     stats = []
     print(checkpoint_path.format(net=args.net, epoch=0, type='regular'))
-    for sigma in [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
+    for sigma in [0.01, 0.001, 0.0001, 0.00001, 0.000001]:
         args.sigma = sigma
+        net = get_network(args)
+
+        if args.dp:
+            net = convert_batchnorm_modules(net)
+
+        net.to(device)
+        loss_function = nn.CrossEntropyLoss()
+        optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[40, 60], gamma=0.2) #learning rate decay
+
+
         if args.dp:
             privacy_engine = PrivacyEngine(
                 net,
