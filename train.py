@@ -138,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     parser.add_argument('-dp', default=False, action='store_true')
-    parser.add_argument('-save_path', type=str, default='/content/drive/My Drive/resnet18')
+    parser.add_argument('-save_path', type=str, default='/content/drive/My Drive/resnet18/cifar10')
     parser.add_argument('-epochs', type=int, default=60)
     parser.add_argument('-sigma', type=float, default=0.0001)
     parser.add_argument('-c', type=float, default=100.)
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     best_acc = 0.0
     stats = []
     print(checkpoint_path.format(net=args.net, epoch=0, type='regular'))
-    for sigma in [0.01, 0.001, 0.0001, 0.00001, 0.000001]:
+    for sigma in [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
         args.sigma = sigma
         net = get_network(args)
 
@@ -225,6 +225,8 @@ if __name__ == '__main__':
             print("Attached privacy engine")
 
         for epoch in range(1, args.epochs + 1):
+            print("TRAINING WITH SIGMA", sigma)
+            print(os.path.join(args.save_path, f"resnet18_cifar10_dp_{sigma}.tar"))
             if epoch > args.warm:
                 train_scheduler.step(epoch)
 
@@ -248,7 +250,7 @@ if __name__ == '__main__':
                     'best_alpha' : alpha,
                     'accuracy'  : acc
                 }, 
-                os.path.join(args.save_path, f"resnet18_cifar100_dp_{sigma}.tar")
+                os.path.join(args.save_path, f"resnet18_cifar10_dp_{sigma}.tar")
             )
             print("SAVEDDDDDDDDDD")
                 #start to save best performance model after learning rate decay to 0.01
